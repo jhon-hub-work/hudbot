@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0d0f">
+<title>Huddle</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230c0d0f'/%3E%3Ccircle cx='12' cy='16' r='5' fill='%2358c79a'/%3E%3Ccircle cx='20' cy='16' r='5' fill='%2358c79a' fill-opacity='.45'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
+<link rel="stylesheet" href="/hudbot.css">
+<style>
+  :root {
+    --bg:#0c0d0f; --surface:#14161a; --surface-2:#1b1e23; --tile:#0f1114;
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+    --text:#eceef1; --mute:#8d939c; --accent:#58c79a; --accent-ink:#06261a; --danger:#e5646a;
+    --spring:cubic-bezier(0.32,0.72,0,1);
+    --font:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'Geist Mono',ui-monospace,'SF Mono',Consolas,monospace;
+  }
+  * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:var(--bg); color:var(--text); font:400 16px/1.55 var(--font); -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  button,input { font:inherit; color:inherit; }
+  button { cursor:pointer; touch-action:manipulation; border:0; background:none; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  [hidden] { display:none !important; }
+
+  .screen { display:none; min-height:100dvh; }
+  .screen.on { display:grid; }
+
+  @keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  .rise { animation:rise .8s var(--spring) both; animation-delay:calc(var(--i,0) * 90ms); }
+
+  .eyebrow { display:inline-flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); border:1px solid var(--line); border-radius:999px; padding:6px 12px; width:max-content; max-width:100%; }
+  .eyebrow b { width:6px; height:6px; border-radius:50%; background:var(--accent); flex:none; }
+  .bezel { padding:6px; border-radius:30px; background:rgba(255,255,255,.03); border:1px solid var(--line); }
+  .core { border-radius:24px; background:var(--surface); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:12px; border-radius:999px; padding:14px 24px; background:var(--surface-2); border:1px solid var(--line-2); font-weight:500; transition:transform .5s var(--spring), background .3s var(--spring); }
+  .btn:hover { background:#22262c; }
+  .btn:active { transform:scale(.97); transition-duration:.1s; }
+  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:transparent; padding:8px 8px 8px 26px; }
+  .btn.primary:hover { background:#6dd4a9; }
+  .btn.primary .isle { width:38px; height:38px; border-radius:50%; background:rgba(6,38,26,.14); display:grid; place-items:center; font-size:18px; transition:transform .5s var(--spring); }
+  .btn.primary:hover .isle { transform:translate(2px,-1px) scale(1.05); }
+  .txt { width:100%; background:var(--bg); border:1px solid var(--line-2); border-radius:14px; padding:14px 16px; transition:border-color .3s var(--spring); }
+  .txt::placeholder { color:#5d636c; }
+  .txt:focus { outline:none; border-color:var(--accent); }
+  label.lbl { display:block; font-size:13px; color:var(--mute); margin-bottom:8px; }
+
+  #lobby { grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); align-items:center; gap:64px; padding:clamp(24px,6vw,96px); max-width:1320px; margin:0 auto; position:relative; }
+  #lobby::before { content:""; position:fixed; inset:0; pointer-events:none; background:radial-gradient(60% 50% at 20% 30%, rgba(88,199,154,.07), transparent 70%); }
+  #lobby > * { position:relative; }
+  #lobby h1 { font-size:clamp(2.6rem,6vw,4.6rem); line-height:1.02; letter-spacing:-.035em; font-weight:500; margin:22px 0 20px; max-width:11ch; }
+  #lobby .lede { color:var(--mute); max-width:44ch; font-size:1.05rem; }
+  .facts { display:flex; gap:28px; margin-top:40px; color:var(--mute); font-size:13px; flex-wrap:wrap; }
+  .facts span { display:flex; align-items:center; gap:8px; }
+  .facts i { font-size:18px; color:var(--text); }
+  .startcard { padding:28px; display:flex; flex-direction:column; gap:22px; }
+  .startcard h2 { font-size:1.15rem; font-weight:500; letter-spacing:-.01em; }
+  .or { display:flex; align-items:center; gap:14px; color:var(--mute); font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+  .or::before,.or::after { content:""; flex:1; height:1px; background:var(--line); }
+  .joinrow { display:flex; gap:10px; }
+  .joinrow .btn { padding:0 20px; }
+
+  #prejoin { grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr); align-items:center; gap:56px; padding:clamp(20px,5vw,72px); max-width:1180px; margin:0 auto; }
+  .previewwrap { position:relative; border-radius:24px; overflow:hidden; background:var(--tile); aspect-ratio:4/3; }
+  #preview { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; }
+  .previewwrap .ph { position:absolute; inset:0; display:none; place-items:center; background:var(--surface-2); font-size:4rem; color:var(--mute); }
+  .previewwrap.camoff .ph { display:grid; }
+  .previewwrap .ctl { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:flex; gap:10px; }
+  .side { display:flex; flex-direction:column; gap:20px; }
+  .side h1 { font-size:clamp(1.8rem,3.4vw,2.6rem); line-height:1.08; letter-spacing:-.03em; font-weight:500; }
+  .note { color:var(--mute); font-size:13px; min-height:1.4em; }
+
+  .rb { display:grid; place-items:center; width:48px; height:48px; border-radius:50%; background:rgba(28,31,36,.92); border:1px solid var(--line-2); font-size:22px; transition:transform .5s var(--spring), background .3s var(--spring); }
+  .rb:hover { background:#2a2e35; }
+  .rb:active { transform:scale(.92); transition-duration:.1s; }
+  .rb[aria-pressed="true"] { background:#f2f3f5; color:#14161a; border-color:transparent; }
+  .rb[aria-pressed="true"].live { background:var(--accent); color:var(--accent-ink); }
+
+  #call { grid-template-rows:auto 1fr; height:100dvh; min-height:0; overflow:hidden; }
+  #top { display:flex; justify-content:center; padding:max(14px,env(safe-area-inset-top)) 16px 0; }
+  .pill { display:inline-flex; align-items:center; gap:10px; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:8px 16px; font-size:13px; color:var(--mute); max-width:100%; }
+  .pill .dot { width:7px; height:7px; border-radius:50%; background:var(--mute); flex:none; }
+  .pill.wait .dot { background:var(--accent); animation:pulse 2s var(--spring) infinite; }
+  .pill.live .dot { background:var(--accent); }
+  .pill .mono { font-family:var(--mono); color:var(--text); }
+  @keyframes pulse { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.8); opacity:.35; } }
+
+  #grid { display:grid; gap:12px; padding:14px 14px 120px; min-height:0; grid-template-columns:1fr; grid-auto-rows:minmax(0,1fr); }
+  #grid[data-n="2"],#grid[data-n="3"],#grid[data-n="4"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #grid[data-n="1"] .tile { width:min(100%,1100px); margin:0 auto; }
+  .tile { position:relative; border-radius:26px; overflow:hidden; background:var(--tile); border:1px solid var(--line); min-height:0; animation:rise .6s var(--spring) both; }
+  .tile video { width:100%; height:100%; object-fit:cover; display:block; }
+  .tile.self video { transform:scaleX(-1); }
+  .tile.self.rear video { transform:none; }
+  .tile.sharing video { object-fit:contain; transform:none; background:var(--tile); }
+  .tile .ph { position:absolute; inset:0; display:none; place-items:center; background:var(--surface-2); font-size:clamp(2.5rem,8vw,5rem); font-weight:500; color:var(--mute); }
+  .tile.camoff:not(.sharing) .ph { display:grid; }
+  .tag { position:absolute; display:flex; align-items:center; gap:6px; background:rgba(12,13,15,.7); border-radius:999px; padding:5px 12px; font-size:12px; }
+  .tag.name { right:12px; bottom:12px; }
+  .tag.state { right:12px; top:12px; color:var(--mute); }
+  .tag.state:empty { display:none; }
+  .tag.mic { left:12px; top:12px; color:var(--danger); display:none; }
+  .tile.muted .tag.mic { display:flex; }
+
+  #dock { position:fixed; left:50%; bottom:max(18px,env(safe-area-inset-bottom)); transform:translateX(-50%); display:flex; align-items:flex-end; gap:6px; padding:10px 14px; border-radius:999px; background:rgba(20,22,26,.78); backdrop-filter:blur(24px) saturate(160%); -webkit-backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line-2); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); z-index:20; max-width:calc(100vw - 20px); }
+  .dk { display:flex; flex-direction:column; align-items:center; gap:6px; padding:0 8px; font-size:11px; color:var(--mute); min-width:60px; }
+  .dk .rb { width:52px; height:52px; }
+  .dk.leave .rb { background:var(--danger); border-color:transparent; color:#fff; }
+  .dk.leave .rb:hover { background:#ee767b; }
+  .sep { width:1px; align-self:stretch; background:var(--line); margin:4px 6px 18px; }
+
+  #toast { position:fixed; left:50%; bottom:128px; transform:translate(-50%,10px); background:var(--surface-2); border:1px solid var(--line-2); border-radius:999px; padding:10px 18px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .35s var(--spring), transform .5s var(--spring); z-index:30; white-space:nowrap; max-width:calc(100vw - 24px); overflow:hidden; text-overflow:ellipsis; }
+  #toast.on { opacity:1; transform:translate(-50%,0); }
+
+
+  .hdr { display:flex; align-items:center; gap:14px; }
+  .hdr .hbslot { width:64px; flex:none; }
+  .mute { color:var(--mute); }
+  .hudrow { display:flex; align-items:center; gap:14px; padding:14px; border:1px solid var(--line); border-radius:22px; background:var(--surface); }
+  .hudrow .hbslot { width:48px; flex:none; }
+  .hudrow > div { flex:1; min-width:0; }
+  .hudrow b { display:block; font-weight:500; font-size:15px; }
+  .hudrow p { font-size:13px; color:var(--mute); line-height:1.4; margin-top:2px; }
+  .sw { position:relative; width:46px; height:28px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line-2); flex:none; transition:background .3s var(--spring); }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#c9ced6; transition:transform .35s var(--spring), background .3s var(--spring); }
+  .sw[aria-checked="true"] { background:var(--accent); border-color:transparent; }
+  .sw[aria-checked="true"]::after { transform:translateX(18px); background:var(--accent-ink); }
+  .btn.sm { padding:9px 18px; font-size:14px; }
+  .btn.primary.sm { padding:5px 5px 5px 18px; }
+  .btn.primary.sm .isle { width:32px; height:32px; font-size:16px; }
+  .seg { display:inline-flex; padding:3px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line-2); }
+  .seg button { padding:6px 14px; border-radius:999px; font-size:13px; color:var(--mute); transition:background .3s var(--spring), color .3s var(--spring); }
+  .seg button[aria-pressed="true"] { background:#f2f3f5; color:#14161a; }
+
+  #hudchip { position:fixed; left:16px; bottom:max(18px,env(safe-area-inset-bottom)); z-index:15; width:124px; display:flex; flex-direction:column; align-items:flex-start; gap:5px; text-align:left; transition:transform .5s var(--spring); }
+  #hudchip:active { transform:scale(.97); transition-duration:.1s; }
+  #hudchip .stage { width:100%; height:52px; display:flex; align-items:flex-end; }
+  #hudchip .hbslot { width:46px; }
+  #hudchip .tagline { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--text); background:rgba(20,22,26,.82); border:1px solid var(--line-2); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  #hudchip .tagline i { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+
+  #hudpanel { position:fixed; left:14px; bottom:116px; width:min(390px,calc(100vw - 28px)); max-height:min(68dvh,560px); display:flex; flex-direction:column; border-radius:28px; background:rgba(20,22,26,.97); border:1px solid var(--line-2); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); z-index:25; transform-origin:bottom left; opacity:0; transform:translateY(10px) scale(.96); visibility:hidden; pointer-events:none; transition:opacity .22s var(--ease-out), transform .28s var(--ease-out), visibility 0s linear .28s; }
+  #hudpanel.on { opacity:1; transform:none; visibility:visible; pointer-events:auto; transition-delay:0s; }
+  .hp-head { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); }
+  .hp-head .hbslot { width:40px; flex:none; }
+  .hp-head > div { flex:1; min-width:0; font-weight:500; }
+  .hp-head small { display:block; font-weight:400; color:var(--mute); font-size:12px; }
+  .hp-head .rb { width:36px; height:36px; font-size:18px; }
+  #hpBody { padding:14px 16px; overflow:auto; display:flex; flex-direction:column; gap:12px; min-height:90px; }
+  .hp-foot { padding:12px 16px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--line); }
+  .hp-foot .sw-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--mute); margin-right:auto; }
+  .momsec { margin-bottom:16px; }
+  .momsec h3, .tlabel { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); font-weight:500; margin-bottom:6px; }
+  .momsec ul { padding-left:18px; }
+  .momsec li { margin:4px 0; }
+  .momsec .acts { list-style:none; padding-left:0; }
+  .momsec .acts li { padding-left:0; }
+  .momsec .acts b { color:var(--accent); font-weight:500; }
+  .tr p { font-size:13px; margin:6px 0; line-height:1.5; }
+  .tr small { color:var(--mute); font-family:var(--mono); font-size:11px; margin-right:8px; }
+  .tr b { font-weight:500; }
+
+  #wrap { position:fixed; inset:0; z-index:40; background:var(--bg); display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px; }
+  #wrap.on { display:flex; animation:rise .5s var(--spring) both; }
+  #wrap .hbslot { width:150px; }
+
+  #notes { place-items:start center; }
+  .notespage { width:100%; max-width:780px; padding:clamp(20px,5vw,64px) 16px 80px; display:flex; flex-direction:column; gap:26px; }
+  .nhead { display:flex; align-items:center; gap:20px; }
+  .nhead .hbslot { width:92px; flex:none; }
+  .nhead h1 { font-size:clamp(1.7rem,4vw,2.5rem); line-height:1.1; letter-spacing:-.03em; font-weight:500; margin:10px 0 6px; }
+  .nbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .momcard { padding:26px 26px 10px; font-size:15px; line-height:1.6; }
+  .momcard p.mute { padding-bottom:16px; }
+  #nTrWrap summary { cursor:pointer; padding:14px 20px; color:var(--mute); }
+  #nTrWrap .tr { padding:0 20px 18px; }
+
+
+  #ended { place-items:center; text-align:center; }
+  .endedbox { display:flex; flex-direction:column; align-items:center; gap:16px; padding:24px; max-width:420px; }
+  .endedbox .hbslot { width:110px; }
+  .endedbox h1 { font-size:clamp(1.7rem,4vw,2.3rem); letter-spacing:-.03em; font-weight:500; }
+  .endedbox .row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+  .langrow { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; color:var(--mute); }
+  .dk.leave { position:relative; }
+  #leavemenu { position:absolute; bottom:calc(100% + 16px); right:-6px; min-width:210px; padding:6px; border-radius:20px; background:rgba(20,22,26,.98); border:1px solid var(--line-2); display:flex; flex-direction:column; gap:2px; opacity:0; transform:translateY(8px) scale(.96); transform-origin:bottom right; visibility:hidden; pointer-events:none; transition:opacity .2s var(--ease-out), transform .25s var(--ease-out), visibility 0s linear .25s; }
+  #leavemenu.on { opacity:1; transform:none; visibility:visible; pointer-events:auto; transition-delay:0s; }
+  #leavemenu button { text-align:left; padding:12px 14px; border-radius:14px; font-size:14px; color:var(--text); display:flex; align-items:center; gap:10px; transition:background .2s var(--ease-out); }
+  #leavemenu button:hover { background:var(--surface-2); }
+  #leavemenu button.danger { color:var(--danger); }
+  #leavemenu i { font-size:18px; }
+  #caps { position:fixed; left:50%; bottom:122px; transform:translateX(-50%); width:min(720px,calc(100vw - 24px)); display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; z-index:12; }
+  .cap { background:rgba(12,13,15,.86); border:1px solid var(--line); border-radius:16px; padding:8px 16px; font-size:clamp(15px,2.4vw,19px); line-height:1.4; text-align:center; animation:rise .3s var(--ease-out) both; transition:opacity .4s var(--ease-out); }
+  .cap b { color:var(--accent); font-weight:500; margin-right:6px; }
+  .cap.out { opacity:0; }
+
+  @media (max-width:860px) {
+    #lobby,#prejoin { grid-template-columns:minmax(0,1fr); gap:36px; align-content:center; padding:28px 16px; }
+    #lobby h1 { max-width:none; }
+    #grid[data-n="2"] { grid-template-columns:1fr; }
+    .dk { min-width:0; padding:0 3px; }
+    .dk span { display:none; }
+    .dk .rb { width:46px; height:46px; }
+    .sep { margin-bottom:0; }
+    #dock { padding:10px 12px; gap:2px; }
+    #hudchip { bottom:96px; left:10px; width:112px; }
+    #hudpanel { left:10px; right:10px; width:auto; bottom:100px; }
+    .nhead .hbslot { width:64px; }
+    #caps { bottom:196px; }
+    #leavemenu { right:-4px; }
+    #toast { bottom:100px; }
+    #grid { padding-bottom:104px; }
+  }
+  @media (max-width:420px) {
+    .dk .rb { width:41px; height:41px; font-size:20px; }
+    #dock { padding:8px 8px; }
+    .dk { padding:0 2px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { animation-duration:.01ms !important; animation-delay:0s !important; transition-duration:.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<main id="lobby" class="screen">
+  <section>
+    <span class="eyebrow rise" style="--i:0"><b></b>Free · No account · No time limit</span>
+    <h1 class="rise" style="--i:1">Meet without the clock.</h1>
+    <p class="lede rise" style="--i:2">Huddle is a video room for up to four people. Start one, send the link, and you're talking. Calls never cut off at 40 minutes.</p>
+    <div class="facts rise" style="--i:3">
+      <span><i class="ph-light ph-link"></i>One link to join</span>
+      <span><i class="ph-light ph-monitor-arrow-up"></i>Screen sharing</span>
+      <span><i class="ph-light ph-device-mobile"></i>Works on phones</span>
+    </div>
+  </section>
+  <section class="bezel rise" style="--i:4">
+    <div class="core startcard">
+      <div class="hdr"><div id="lobbyBot"></div><h2>Start a room</h2></div>
+      <button class="btn primary" id="newMeeting">New meeting <span class="isle"><i class="ph-light ph-arrow-up-right"></i></span></button>
+      <div class="or">or</div>
+      <form class="joinrow" id="joinForm">
+        <input class="txt" id="code" placeholder="Paste a meeting link" autocomplete="off" aria-label="Meeting link or code">
+        <button class="btn" type="submit">Join</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<main id="prejoin" class="screen">
+  <section class="bezel">
+    <div class="previewwrap" id="pvwrap">
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="ph" id="pvph"></div>
+      <div class="ctl">
+        <button class="rb" id="pjMic" data-act="mic" aria-label="Microphone"></button>
+        <button class="rb" id="pjCam" data-act="cam" aria-label="Camera"></button>
+      </div>
+    </div>
+  </section>
+  <section class="side">
+    <span class="eyebrow"><b></b>Ready check</span>
+    <h1>Ready to join?</h1>
+    <div>
+      <label class="lbl" for="name">Your name</label>
+      <input class="txt" id="name" placeholder="Maria" maxlength="30" autocomplete="nickname">
+    </div>
+    <div class="hudrow">
+      <div id="pjBot"></div>
+      <div><b>Hudbot takes the notes</b><p>Writes minutes from your voice. Audio isn't saved, only text. Kept 30 days. You can pause it any time.</p></div>
+      <button class="sw" data-hud-switch role="switch" aria-checked="true" aria-label="Hudbot takes notes"></button>
+    </div>
+    <div class="langrow"><span>I speak</span><div class="seg asr"><button data-a="tl" aria-pressed="true">Taglish</button><button data-a="en" aria-pressed="false">English</button><button data-a="auto" aria-pressed="false">Auto</button></div></div>
+    <button class="btn primary" id="joinBtn">Join meeting <span class="isle"><i class="ph-light ph-arrow-up-right"></i></span></button>
+    <p class="note" id="pjNote"></p>
+  </section>
+</main>
+
+<main id="call" class="screen">
+  <div id="top"><div class="pill wait" id="status"><span class="dot"></span><span>Waiting for others</span></div></div>
+  <div id="grid" data-n="0"></div>
+  <nav id="dock" aria-label="Call controls">
+    <div class="dk"><button class="rb" id="mic" data-act="mic" aria-label="Microphone"></button><span id="micLbl">Mute</span></div>
+    <div class="dk"><button class="rb" id="cam" data-act="cam" aria-label="Camera"></button><span id="camLbl">Stop video</span></div>
+    <div class="dk" hidden><button class="rb" id="flip" aria-label="Switch camera"><i class="ph-light ph-camera-rotate"></i></button><span>Flip</span></div>
+    <div class="dk"><button class="rb" id="share" aria-label="Share screen" aria-pressed="false"><i class="ph-light ph-monitor-arrow-up"></i></button><span id="shareLbl">Share</span></div>
+    <div class="dk"><button class="rb" id="cc" aria-label="Captions" aria-pressed="false"><i class="ph-light ph-closed-captioning"></i></button><span id="ccLbl">Captions</span></div>
+    <div class="dk"><button class="rb" id="copy" aria-label="Copy invite link"><i class="ph-light ph-link"></i></button><span>Invite</span></div>
+    <div class="sep"></div>
+    <div class="dk leave">
+      <div id="leavemenu" role="menu"><button id="lvLeave" role="menuitem"><i class="ph-light ph-sign-out"></i>Leave, keep it going</button><button id="lvEnd" class="danger" role="menuitem"><i class="ph-light ph-power"></i>End for everyone</button></div>
+      <button class="rb" id="leave" aria-label="Leave meeting" aria-haspopup="menu"><i class="ph-light ph-phone-disconnect"></i></button><span>Leave</span>
+    </div>
+  </nav>
+</main>
+
+<button id="hudchip" aria-label="Open Hudbot notes" hidden>
+  <div class="stage"><div id="chipBot"></div></div>
+  <span class="tagline"><i></i><span id="chipText">Taking notes</span></span>
+</button>
+<section id="hudpanel" aria-label="Hudbot notes" inert>
+  <div class="hp-head"><div id="panelBot"></div><div>Hudbot<small>Takes notes for the whole room</small></div><button class="rb" id="hpClose" aria-label="Close notes"><i class="ph-light ph-x"></i></button></div>
+  <div id="hpBody"></div>
+  <div class="hp-foot">
+    <div class="langrow" style="width:100%"><span>I speak</span><div class="seg asr"><button data-a="tl" aria-pressed="true">Taglish</button><button data-a="en" aria-pressed="false">English</button><button data-a="auto" aria-pressed="false">Auto</button></div></div>
+    <div class="langrow" style="width:100%"><span>Minutes in</span><div class="seg"><button data-l="en" aria-pressed="true">English</button><button data-l="taglish" aria-pressed="false">Taglish</button></div></div>
+    <span class="sw-row"><button class="sw" data-hud-switch role="switch" aria-checked="true" aria-label="Hudbot takes my notes"></button>My mic</span>
+    <button class="btn sm" id="hpWrite">Write MoM</button>
+    <button class="btn sm" id="hpCopy">Copy</button>
+  </div>
+</section>
+<div id="caps" aria-live="polite"></div>
+<main id="ended" class="screen"><div class="endedbox"><div id="endBot"></div><h1>This meeting has ended</h1><p class="mute">The host closed it, so this link doesn't work any more.</p><div class="row"><a class="btn primary sm" href="/">New meeting <span class="isle"><i class="ph-light ph-arrow-up-right"></i></span></a><a class="btn sm" id="endNotes" href="#">See the notes</a></div></div></main>
+<div id="wrap"><div id="wrapBot"></div><h2>Hudbot is writing your notes</h2><p class="mute">This takes a few seconds.</p></div>
+
+<main id="notes" class="screen"><div class="notespage">
+  <div class="nhead"><div id="notesBot"></div><div><span class="eyebrow"><b></b>Minutes of meeting</span><h1 id="nTitle">Hudbot's notes</h1><p class="note" id="nMeta"></p></div></div>
+  <div class="nbar">
+    <button class="btn primary sm" id="nCopy">Copy minutes <span class="isle"><i class="ph-light ph-copy"></i></span></button>
+    <div class="seg" id="nLang"><button data-l="en" aria-pressed="true">English</button><button data-l="taglish" aria-pressed="false">Taglish</button></div>
+    <button class="btn sm" id="nRegen">Rewrite</button>
+    <button class="btn sm" id="nLink">Copy link</button>
+  </div>
+  <div class="bezel"><div class="core momcard"><div id="nMom"></div></div></div>
+  <details class="bezel" id="nTrWrap"><summary>Full transcript</summary><div class="tr" id="nTr"></div></details>
+  <p class="note">Notes are kept for 30 days, then deleted. Audio is never saved.</p>
+  <a class="btn sm" href="/" style="width:max-content">Start a new meeting</a>
+</div></main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/hudbot.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const show = (id) => document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === id));
+let toastTimer;
+const toast = (t) => {
+  const el = $("toast");
+  el.textContent = t;
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("on"), 2400);
+};
+const roomId = (location.pathname.match(/^\/room\/([a-z0-9-]{6,64})$/) || [])[1];
+const notesId = (location.pathname.match(/^\/notes\/([a-z0-9-]{6,64})$/) || [])[1];
+
+// ---------- lobby ----------
+const newId = () => [...crypto.getRandomValues(new Uint8Array(12))].map((b) => (b % 36).toString(36)).join("");
+$("newMeeting").onclick = () => {
+  const id = newId();
+  localStorage.setItem("huddle-host-" + id, newId() + newId());   // secret that makes this device the host
+  location.href = "/room/" + id;
+};
+$("joinForm").onsubmit = (e) => {
+  e.preventDefault();
+  const m = $("code").value.trim().match(/([a-z0-9-]{6,64})\/?$/i);
+  if (m) location.href = "/room/" + m[1].toLowerCase();
+  else toast("Paste the full meeting link");
+};
+
+// ---------- local media + controls (shared by pre-join and call) ----------
+let local = null, camTrack = null, micTrack = null, realCam = false, screenTrack = null;
+let ws, myId, iceServers;
+const peers = new Map();
+const names = new Map();
+
+const blackTrack = () => {
+  const c = document.createElement("canvas");
+  c.width = 320; c.height = 240;
+  const g = c.getContext("2d");
+  g.fillStyle = "#0f1114";
+  g.fillRect(0, 0, 320, 240);
+  return c.captureStream(1).getVideoTracks()[0];
+};
+
+const ICON = (n) => `<i class="ph-light ph-${n}"></i>`;
+function paintControls() {
+  const micOn = !!micTrack && micTrack.enabled;
+  const camOn = realCam && camTrack.enabled;
+  for (const id of ["pjMic", "mic"]) {
+    const b = $(id);
+    b.innerHTML = ICON(micOn ? "microphone" : "microphone-slash");
+    b.setAttribute("aria-pressed", String(!micOn));
+    b.title = (micOn ? "Mute" : "Unmute") + "  (M)";
+  }
+  for (const id of ["pjCam", "cam"]) {
+    const b = $(id);
+    b.innerHTML = ICON(camOn ? "video-camera" : "video-camera-slash");
+    b.setAttribute("aria-pressed", String(!camOn));
+    b.title = (camOn ? "Stop video" : "Start video") + "  (V)";
+  }
+  $("micLbl").textContent = micOn ? "Mute" : "Unmute";
+  $("camLbl").textContent = camOn ? "Stop video" : "Start video";
+  $("pvwrap").classList.toggle("camoff", !camOn);
+}
+
+function toggleMic() {
+  if (!micTrack) return toast("No microphone found");
+  micTrack.enabled = !micTrack.enabled;
+  paintControls(); sendState();
+  toast(micTrack.enabled ? "Microphone on" : "Microphone off");
+}
+function toggleCam() {
+  if (!realCam) return toast("No camera found, or another app is using it");
+  camTrack.enabled = !camTrack.enabled;
+  paintControls(); sendState();
+  toast(camTrack.enabled ? "Camera on" : "Camera off");
+}
+document.querySelectorAll('[data-act="mic"]').forEach((b) => (b.onclick = toggleMic));
+document.querySelectorAll('[data-act="cam"]').forEach((b) => (b.onclick = toggleCam));
+addEventListener("keydown", (e) => {
+  if (e.target.matches("input") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!$("call").classList.contains("on") && !$("prejoin").classList.contains("on")) return;
+  if (e.key === "m") toggleMic();
+  if (e.key === "v") toggleCam();
+});
+
+// ---------- pre-join ----------
+async function prejoin() {
+  try { if ((await (await fetch(`/api/room/${roomId}/status`)).json()).ended) return showEnded(); } catch {}
+  show("prejoin");
+  $("name").value = localStorage.getItem("huddle-name") || "";
+  $("pvph").textContent = ($("name").value.trim()[0] || "·").toUpperCase();
+  try {
+    local = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch {
+    try { local = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { local = new MediaStream(); }
+    $("pjNote").textContent = "Camera unavailable. If another app or browser is using it, close that first. You can still join and watch.";
+  }
+  realCam = !!local.getVideoTracks()[0];
+  camTrack = local.getVideoTracks()[0] || blackTrack();
+  micTrack = local.getAudioTracks()[0];
+  $("preview").srcObject = new MediaStream([camTrack]);
+  paintControls();
+  listCams();
+}
+
+$("name").addEventListener("input", () => ($("pvph").textContent = ($("name").value.trim()[0] || "·").toUpperCase()));
+$("joinBtn").onclick = () => {
+  if (!camTrack) return toast("Still starting your camera…");
+  const name = $("name").value.trim() || "Guest";
+  localStorage.setItem("huddle-name", name);
+  startCall(name);
+};
+
+// ---------- call ----------
+async function startCall(name) {
+  show("call");
+  const self = addTile("self", name + " (you)", new MediaStream([camTrack]), true);
+  self.querySelector("video").muted = true;
+  paintControls();
+  sendState();
+  setInterval(tick, 1000);
+  hud.name = name;
+  $("hudchip").hidden = false;
+  if (micTrack) { startVad(); startRec(); }
+  paintHud();
+  if (hud.on && micTrack) setTimeout(() => toast("Hudbot is taking notes. Tap the robot to pause it for you."), 1200);
+  iceServers = (await fetch("/api/ice").then((r) => r.json())).iceServers;
+  connect(name);
+  setInterval(() => ws?.readyState === 1 && ws.send('{"type":"ping"}'), 20000);   // keep idle phones connected
+}
+
+// If the phone sleeps, switches apps (e.g. the share sheet) or loses signal, the socket drops.
+// Come back automatically: re-check camera and mic, reconnect, and call everyone again.
+let finished = false, retry = 0, reconnectTimer;
+const cid = sessionStorage.getItem("huddle-cid") || (sessionStorage.setItem("huddle-cid", newId()), sessionStorage.getItem("huddle-cid"));
+function connect(name = hud.name) {
+  clearTimeout(reconnectTimer);
+  const hk = localStorage.getItem("huddle-host-" + roomId);
+  const sock = (ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${roomId}?name=${encodeURIComponent(name)}&cid=${cid}${hk ? "&hk=" + encodeURIComponent(hk) : ""}`));
+  sock.onopen = () => (retry = 0);
+  sock.onmessage = (e) => {
+    if (sock !== ws) return;
+    const m = JSON.parse(e.data);
+    if (m.type === "ended") { finished = true; onEnded(); }
+    else if (m.type === "caption") addCaption(m);
+    else if (m.type === "full") { finished = true; toast("This room is full (4 max)"); setTimeout(() => (location.href = "/"), 1800); }
+    else if (m.type === "welcome") {
+      myId = m.id;
+      isHost = !!m.host;
+      sendState();
+      for (const p of m.peers) { names.set(p.id, p.name); offerTo(p).catch((err) => { console.error(err); toast("Connect failed: " + err.message); }); }
+      updateStatus();
+    }
+    else if (m.type === "join") { names.set(m.id, m.name); toast(m.name + " joined"); sendState(); }
+    else if (m.type === "state") { const p = peers.get(m.id); if (p) setTileState(p.tile, m); }
+    else if (m.type === "leave") { toast((names.get(m.id) || "Someone") + " left"); dropPeer(m.id); }
+    else if (m.type === "signal") queueSignal(m.from, m.data);
+  };
+  sock.onclose = () => { if (!finished && sock === ws) connectionLost(); };
+}
+function connectionLost() {
+  myId = null;
+  for (const id of [...peers.keys()]) dropPeer(id);
+  setStatus("wait", "<span>Reconnecting…</span>");
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(reconnect, Math.min(4000, 400 * 2 ** retry++));
+}
+async function reconnect() {
+  if (finished) return;
+  await ensureMedia();
+  if (ws && ws.readyState <= 1) { ws.onclose = null; ws.close(); }
+  connect();
+}
+async function ensureMedia() {
+  const dead = (t) => !t || t.readyState === "ended";
+  if (realCam && dead(camTrack)) {
+    try {
+      const was = camTrack.enabled;
+      camTrack = (await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })).getVideoTracks()[0];
+      camTrack.enabled = was;
+      if (!screenTrack) setVideo(camTrack);
+    } catch (e) { console.error(e); }
+  }
+  if (micTrack && dead(micTrack)) {
+    try {
+      const was = micTrack.enabled;
+      micTrack = (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })).getAudioTracks()[0];
+      micTrack.enabled = was;
+      for (const { pc } of peers.values()) pc.getSenders().find((x) => x.track?.kind === "audio")?.replaceTrack(micTrack);
+      stopRec(); startVad();
+    } catch (e) { console.error(e); }
+  }
+  paintControls();
+  if (hud.on && micTrack && !hud.rec && !hud.stopping) startRec();
+}
+document.addEventListener("visibilitychange", async () => {
+  if (document.hidden || !myId && !ws || finished || !inCall()) return;
+  await ensureMedia();
+  if (!ws || ws.readyState > 1) { clearTimeout(reconnectTimer); reconnect(); }
+});
+addEventListener("online", () => { if (!finished && inCall()) { clearTimeout(reconnectTimer); reconnect(); } });
+
+const startedAt = Date.now();
+function tick() {
+  const t = $("statusTime");
+  if (!t) return;
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  t.textContent = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, "0")).join(":").replace(/^00:/, "");
+}
+function setStatus(cls, html) {
+  const el = $("status");
+  el.className = "pill " + cls;
+  el.innerHTML = `<span class="dot"></span>${html}`;
+}
+function updateStatus() {
+  if (!peers.size) setStatus("wait", "<span>Waiting for others. Tap Invite to share the link.</span>");
+  else setStatus("live", `<span>${peers.size + 1} in this room</span><span class="mono" id="statusTime"></span>`);
+  tick();
+}
+
+function makePeer(id, name) {
+  const pc = new RTCPeerConnection({ iceServers });
+  const stream = new MediaStream();
+  const peer = { pc, stream, tile: addTile(id, name, stream, false), q: Promise.resolve() };
+  peers.set(id, peer);
+  updateStatus();
+  const send = (data) => ws.send(JSON.stringify({ type: "signal", to: id, data }));
+  peer.send = send;
+  const stateTag = peer.tile.querySelector(".state");
+  stateTag.textContent = "connecting…";
+  pc.onicecandidate = (e) => e.candidate && send({ candidate: e.candidate });
+  pc.ontrack = (e) => {
+    stream.addTrack(e.track);
+    const v = peer.tile.querySelector("video");
+    v.srcObject = stream;
+    v.play().catch(() => {});
+  };
+  pc.onconnectionstatechange = async () => {
+    stateTag.textContent = pc.connectionState === "connected" ? "" : pc.connectionState;
+    if (pc.connectionState === "connected") sendState();   // the other side now has a tile for us, so tell it our mic and camera state
+    if (pc.connectionState === "failed" && peer.isOfferer) {   // only the original caller restarts ICE
+      await pc.setLocalDescription(await pc.createOffer({ iceRestart: true }));
+      send({ sdp: pc.localDescription });
+    }
+  };
+  return peer;
+}
+
+function addLocalTracks(pc) {
+  for (const t of [camTrack, micTrack].filter(Boolean)) pc.addTrack(t, local);
+}
+
+async function offerTo({ id, name }) {
+  const peer = makePeer(id, name);
+  peer.isOfferer = true;
+  addLocalTracks(peer.pc);
+  if (!micTrack) peer.pc.addTransceiver("audio", { direction: "recvonly" });
+  await peer.pc.setLocalDescription(await peer.pc.createOffer());
+  peer.send({ sdp: peer.pc.localDescription });
+}
+
+// Signals for one peer run one at a time, so ICE candidates never beat the SDP they belong to.
+function queueSignal(from, data) {
+  const peer = peers.get(from) || (data.sdp ? makePeer(from, names.get(from) || "Guest") : null);
+  if (!peer) return;
+  peer.q = peer.q.then(() => onSignal(peer, data)).catch((err) => { console.error(err); toast("Signal error: " + err.message); });
+}
+
+async function onSignal(peer, data) {
+  if (data.sdp) {
+    await peer.pc.setRemoteDescription(data.sdp);
+    if (data.sdp.type === "offer") {
+      if (!peer.tracksAdded) { addLocalTracks(peer.pc); peer.tracksAdded = true; }   // after setRemote so tracks reuse the offer's transceivers
+      await peer.pc.setLocalDescription(await peer.pc.createAnswer());
+      peer.send({ sdp: peer.pc.localDescription });
+    }
+  } else if (data.candidate) {
+    await peer.pc.addIceCandidate(data.candidate);
+  }
+}
+
+function dropPeer(id) {
+  const p = peers.get(id);
+  if (!p) return;
+  p.pc.close();
+  p.tile.remove();
+  peers.delete(id);
+  layout();
+  updateStatus();
+}
+
+function addTile(id, name, stream, self) {
+  const t = document.createElement("div");
+  t.className = "tile" + (self ? " self" : "");
+  t.dataset.id = id;
+  t.innerHTML = '<video autoplay playsinline></video><div class="ph"></div><span class="tag mic"><i class="ph-light ph-microphone-slash"></i></span><span class="tag state"></span><span class="tag name"></span>';
+  t.querySelector(".ph").textContent = (name.trim()[0] || "?").toUpperCase();
+  t.querySelector(".name").textContent = name;
+  t.querySelector("video").srcObject = stream;
+  $("grid").append(t);
+  layout();
+  return t;
+}
+const layout = () => ($("grid").dataset.n = $("grid").children.length);
+
+// ---------- mic / camera / share state shown on every tile ----------
+function setTileState(tile, { cam, mic, share }) {
+  tile.classList.toggle("camoff", !cam);
+  tile.classList.toggle("muted", !mic);
+  tile.classList.toggle("sharing", !!share);
+}
+const myState = () => ({ cam: !!screenTrack || (realCam && camTrack.enabled), mic: !!micTrack?.enabled, share: !!screenTrack });
+function sendState() {
+  const st = myState();
+  const self = document.querySelector(".tile.self");
+  if (self) setTileState(self, st);
+  if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "state", ...st }));
+}
+
+// ---------- switch camera (front / back on phones) ----------
+let camIds = [];
+async function listCams() {
+  try { camIds = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput").map((d) => d.deviceId); }
+  catch { camIds = []; }
+  $("flip").closest(".dk").hidden = !(realCam && camIds.length > 1);
+}
+async function flipCamera() {
+  const cur = camTrack.getSettings?.().deviceId;
+  const next = camIds[(camIds.indexOf(cur) + 1) % camIds.length];
+  const wasOn = camTrack.enabled;
+  const open = async (id) => (await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id }, width: 1280, height: 720 } })).getVideoTracks()[0];
+  camTrack.stop();   // phones can't open two cameras at once
+  try { camTrack = await open(next); }
+  catch {
+    try { camTrack = await open(cur); } catch { realCam = false; camTrack = blackTrack(); }
+    camTrack.enabled = wasOn;
+    paintControls(); sendState();
+    return toast("Couldn't switch camera");
+  }
+  camTrack.enabled = wasOn;
+  const st = camTrack.getSettings?.() || {};
+  const rear = st.facingMode === "environment" || /back|rear|environment/i.test(camTrack.label || "");
+  document.querySelector(".tile.self").classList.toggle("rear", rear);
+  if (!screenTrack) setVideo(camTrack);
+  toast(rear ? "Back camera" : "Front camera");
+}
+$("flip").onclick = flipCamera;
+
+// ---------- screen share ----------
+function paintShare() {
+  const b = $("share");
+  b.setAttribute("aria-pressed", String(!!screenTrack));
+  b.classList.toggle("live", !!screenTrack);
+  $("shareLbl").textContent = screenTrack ? "Stop sharing" : "Share";
+}
+$("share").onclick = async () => {
+  if (screenTrack) return stopShare();
+  if (!navigator.mediaDevices.getDisplayMedia) return toast("Screen sharing works on computers, not phone browsers");
+  try {
+    const s = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    screenTrack = s.getVideoTracks()[0];
+    screenTrack.onended = stopShare;
+    setVideo(screenTrack);
+    toast("Sharing your screen");
+  } catch { toast("Screen share was cancelled"); }
+  paintShare(); sendState();
+};
+function stopShare() {
+  if (!screenTrack) return;
+  screenTrack.stop();
+  screenTrack = null;
+  setVideo(camTrack);
+  paintShare(); sendState();
+  toast("Stopped sharing");
+}
+function setVideo(track) {
+  for (const { pc } of peers.values())
+    pc.getSenders().find((s) => s.track?.kind === "video")?.replaceTrack(track);
+  document.querySelector(".tile.self video").srcObject = new MediaStream([track]);
+}
+
+// ---------- invite / leave ----------
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(location.href); }
+  catch { const t = document.createElement("textarea"); t.value = location.href; document.body.append(t); t.select(); document.execCommand("copy"); t.remove(); }
+  toast("Invite link copied");
+};
+const menu = $("leavemenu");
+const closeMenu = () => menu.classList.remove("on");
+$("leave").onclick = (e) => {
+  e.stopPropagation();
+  if (!isHost) return leaveCall();
+  menu.classList.toggle("on");
+};
+$("lvLeave").onclick = () => { closeMenu(); leaveCall(); };
+$("lvEnd").onclick = () => {
+  closeMenu();
+  ws?.send(JSON.stringify({ type: "end" }));
+  leaveCall("ended");
+};
+addEventListener("click", (e) => { if (!e.target.closest("#leavemenu")) closeMenu(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+
+// ---------- Hudbot: the note-taker ----------
+const ROOM = roomId || notesId;
+const HUD_KEY = "huddle-hudbot";
+const hud = { on: localStorage.getItem(HUD_KEY) !== "0", rec: null, stopping: false, inflight: 0, lastLineAt: 0, doneUntil: 0, voiced: 0, lastVoice: 0, errors: 0, pending: Promise.resolve(), everOn: false, panel: false, lines: [], summary: null, lang: "en", asr: localStorage.getItem("huddle-asr") || "tl", name: "Guest", bots: [], busy: false };
+let isHost = false, caps = { on: localStorage.getItem("huddle-cc") === "1" };
+const NL = String.fromCharCode(10);
+const inCall = () => $("call").classList.contains("on");
+const api = (path, opts) => fetch(`/api/notes/${ROOM}${path}`, opts);
+
+for (const [id, opts] of [["lobbyBot", {}], ["pjBot", {}], ["chipBot", { roam: 64 }], ["panelBot", { behave: false }], ["wrapBot", { mood: "write", behave: false }], ["notesBot", { mood: "done", behave: false }], ["endBot", { mood: "sleep", behave: false }]]) {
+  const host = $(id);
+  if (!host) continue;
+  const b = mountHudbot(host, opts);
+  if (id === "chipBot" || id === "panelBot") hud.bots.push(b);
+  if (id === "chipBot") hud.chip = b;
+}
+
+function paintHud() {
+  document.querySelectorAll("[data-hud-switch]").forEach((b) => b.setAttribute("aria-checked", String(hud.on)));
+  const t = $("chipText");
+  if (t) t.textContent = inCall() && !micTrack ? "No mic, resting" : hud.on ? "Taking notes" : "Paused for you";
+}
+function setHud(on) {
+  hud.on = on;
+  localStorage.setItem(HUD_KEY, on ? "1" : "0");
+  paintHud();
+  if (inCall()) {
+    if (on) startRec(); else stopRec();
+    toast(on ? "Hudbot is taking notes again" : "Hudbot paused. Nothing from your mic is sent.");
+  }
+}
+document.querySelectorAll("[data-hud-switch]").forEach((b) => (b.onclick = () => setHud(!hud.on)));
+const paintAsr = () => document.querySelectorAll(".asr button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.a === hud.asr)));
+document.querySelectorAll(".asr").forEach((g) => g.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-a]");
+  if (!b) return;
+  hud.asr = b.dataset.a;
+  localStorage.setItem("huddle-asr", hud.asr);
+  paintAsr();
+}));
+paintAsr();
+
+// voice activity: lets Hudbot perk up when someone talks, and skip silent clips
+function startVad() {
+  clearInterval(hud.vadIv);
+  hud.vadAc?.close?.();
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    hud.vadAc = ac;
+    ac.resume?.();
+    const an = ac.createAnalyser();
+    an.fftSize = 1024;
+    ac.createMediaStreamSource(new MediaStream([micTrack])).connect(an);
+    const buf = new Uint8Array(an.fftSize);
+    hud.vadIv = setInterval(() => {
+      an.getByteTimeDomainData(buf);
+      let s = 0;
+      for (const v of buf) { const d = (v - 128) / 128; s += d * d; }
+      if (Math.sqrt(s / buf.length) > 0.02 && micTrack.enabled) { hud.voiced++; hud.lastVoice = Date.now(); }
+    }, 100);
+  } catch (e) { console.error(e); }
+}
+
+// record 20s clips of my own mic; each clip is a complete file Whisper can read
+const pickMime = () => ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+function startRec() {
+  if (!hud.on || !micTrack || micTrack.readyState === "ended" || hud.stopping || hud.rec || !window.MediaRecorder) return;
+  hud.everOn = true;
+  const mime = pickMime();
+  let rec;
+  try { rec = new MediaRecorder(new MediaStream([micTrack]), mime ? { mimeType: mime } : undefined); }
+  catch { return toast("This browser can't record audio for Hudbot"); }
+  const chunks = [], t0 = Date.now();
+  hud.voiced = 0;
+  hud.rec = rec;
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    clearInterval(rec.timer);
+    if (hud.rec === rec) hud.rec = null;
+    const voiced = hud.voiced;
+    hud.voiced = 0;
+    if (!rec.discard && voiced >= 4) hud.pending = uploadAudio(new Blob(chunks, { type: rec.mimeType || mime || "audio/webm" }), t0);
+    if (!rec.discard && !hud.stopping && hud.on) startRec();
+  };
+  rec.start();
+  // cut a clip at a natural pause (so captions arrive sentence by sentence), or at 9s at the latest
+  rec.timer = setInterval(() => {
+    if (rec.state !== "recording") return;
+    const age = Date.now() - t0, quiet = Date.now() - hud.lastVoice;
+    if ((age > 2500 && quiet > 700 && hud.voiced >= 3) || age > 9000 || (age > 6000 && hud.voiced < 3)) rec.stop();
+  }, 200);
+}
+function stopRec() {
+  const r = hud.rec;
+  hud.rec = null;
+  if (r) { r.discard = true; if (r.state === "recording") r.stop(); }
+}
+async function uploadAudio(blob, t0) {
+  hud.inflight++;
+  try {
+    const r = await api(`/audio?name=${encodeURIComponent(hud.name)}&asr=${hud.asr}&t=${t0}`, { method: "POST", body: blob });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+    hud.errors = 0;
+    if (j.text) { hud.lastLineAt = Date.now(); if (hud.panel) pull(); }
+  } catch (e) {
+    console.error(e);
+    if (++hud.errors === 1) toast("Hudbot hit a snag and may miss a bit" + (/limit|capacity|neuron/i.test(e.message) ? " (daily AI limit)" : ""));
+  } finally { hud.inflight--; }
+}
+
+function moodTick() {
+  const now = Date.now();
+  let m = "idle";
+  if (inCall() && (!hud.on || !micTrack)) m = "sleep";
+  else if (now < hud.doneUntil) m = "done";
+  else if (hud.inflight || now - hud.lastLineAt < 2500 || hud.busy) m = "write";
+  else if (now - hud.lastVoice < 700) m = "listen";
+  hud.bots.forEach((b) => b.setMood(m));
+}
+
+// ---- live captions: every line Hudbot hears is pushed to everyone in the room ----
+function paintCaps() {
+  $("cc").setAttribute("aria-pressed", String(caps.on));
+  $("cc").classList.toggle("live", caps.on);
+  $("ccLbl").textContent = caps.on ? "Captions on" : "Captions";
+  if (!caps.on) $("caps").replaceChildren();
+}
+$("cc").onclick = () => {
+  caps.on = !caps.on;
+  localStorage.setItem("huddle-cc", caps.on ? "1" : "0");
+  paintCaps();
+  toast(caps.on ? "Captions on. They appear a few seconds after someone speaks." : "Captions off");
+};
+function addCaption(m) {
+  if (!caps.on) return;
+  const box = $("caps");
+  const p = el("p", "cap");
+  p.append(el("b", "", m.name), document.createTextNode(m.text));
+  box.append(p);
+  while (box.children.length > 2) box.firstChild.remove();
+  setTimeout(() => { p.classList.add("out"); setTimeout(() => p.remove(), 450); }, Math.max(5000, m.text.length * 80));
+}
+
+// ---- notes rendering (used by the in-call panel and the notes page) ----
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const clock = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+
+function renderMoM(box, s) {
+  box.replaceChildren();
+  const sec = (title, node) => { const d = el("section", "momsec"); d.append(el("h3", "", title), node); box.append(d); };
+  const list = (items) => { const u = el("ul"); items.forEach((t) => u.append(el("li", "", t))); return u; };
+  if (s.summary) sec("Summary", el("p", "", s.summary));
+  if (s.decisions?.length) sec("Decisions", list(s.decisions));
+  if (s.actions?.length) {
+    const u = el("ul", "acts");
+    s.actions.forEach((a) => { const li = el("li"); li.append(el("b", "", a.owner), document.createTextNode(" " + a.task + (a.due ? " (" + a.due + ")" : ""))); u.append(li); });
+    sec("Action items", u);
+  }
+  if (s.followups?.length) sec("Follow-ups", list(s.followups));
+  if (s.topics?.length) sec("Topics", el("p", "mute", s.topics.join(" · ")));
+}
+function renderTranscript(box, lines) {
+  box.replaceChildren();
+  const t0 = lines[0]?.t || 0;
+  lines.forEach((l) => { const p = el("p"); p.append(el("small", "", clock(l.t - t0)), el("b", "", l.name + " "), document.createTextNode(l.text)); box.append(p); });
+}
+function momText(s) {
+  const out = [];
+  const bullets = (h, a) => a?.length && out.push("", h, ...a.map((x) => "- " + x));
+  out.push("MINUTES OF MEETING: " + s.title);
+  out.push(new Date(s.startedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) + " · about " + s.minutes + " min");
+  out.push("Attendees: " + s.people.join(", "));
+  out.push("", "SUMMARY", s.summary);
+  bullets("DECISIONS", s.decisions);
+  bullets("ACTION ITEMS", s.actions?.map((a) => a.owner + ": " + a.task + (a.due ? " (" + a.due + ")" : "")));
+  bullets("FOLLOW-UPS", s.followups);
+  out.push("", "Notes by Hudbot (Huddle)");
+  return out.join(NL);
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const a = document.createElement("textarea"); a.value = t; document.body.append(a); a.select(); document.execCommand("copy"); a.remove(); }
+}
+
+// ---- in-call panel ----
+function openPanel(on) {
+  hud.panel = on;
+  $("hudpanel").classList.toggle("on", on);
+  $("hudpanel").inert = !on;
+  clearInterval(hud.poll);
+  if (on) { pull(); hud.poll = setInterval(pull, 6000); }
+}
+async function pull() {
+  try { const j = await (await api("/lines")).json(); hud.lines = j.lines; hud.summary = j.summary; renderPanel(); } catch {}
+}
+function renderPanel() {
+  const body = $("hpBody");
+  body.replaceChildren();
+  if (!hud.lines.length) { body.append(el("p", "mute", hud.on ? "Hudbot is listening. Notes show up here as people talk." : "Hudbot is paused for you. Turn it on to take notes.")); return; }
+  if (hud.summary) { const m = el("div", "mom"); renderMoM(m, hud.summary); body.append(m); }
+  const tr = el("div", "tr");
+  renderTranscript(tr, hud.lines.slice(-30));
+  body.append(el("h3", "tlabel", "Transcript"), tr);
+  body.scrollTop = hud.summary ? 0 : body.scrollHeight;
+}
+async function summarize(lang) {
+  const r = await api(`/summarize?lang=${lang}`, { method: "POST" });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "HTTP " + r.status);
+  hud.summary = j.summary;
+  hud.doneUntil = Date.now() + 4500;
+  return j.summary;
+}
+$("hudchip").onclick = () => { hud.chip.poke(); openPanel(!hud.panel); };
+$("hpClose").onclick = () => openPanel(false);
+addEventListener("keydown", (e) => { if (e.key === "Escape" && hud.panel) openPanel(false); });
+document.querySelectorAll(".seg").forEach((seg) => seg.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-l]");
+  if (!b) return;
+  hud.lang = b.dataset.l;
+  document.querySelectorAll(".seg button[data-l]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.l === hud.lang)));
+  if (seg.id === "nLang") rewriteNotes();
+}));
+$("hpWrite").onclick = async () => {
+  const b = $("hpWrite");
+  b.disabled = true; hud.busy = true;
+  try { await summarize(hud.lang); renderPanel(); } catch (e) { toast(e.message); }
+  b.disabled = false; hud.busy = false;
+};
+$("hpCopy").onclick = async () => {
+  if (!hud.lines.length) return toast("Nothing to copy yet");
+  const t0 = hud.lines[0].t;
+  await copyText(hud.summary ? momText(hud.summary) : hud.lines.map((l) => `[${clock(l.t - t0)}] ${l.name}: ${l.text}`).join(NL));
+  toast(hud.summary ? "Minutes copied" : "Transcript copied");
+};
+
+// ---- leaving: let Hudbot finish, then show the minutes ----
+const showEnded = () => { $("endNotes").href = "/notes/" + ROOM; show("ended"); };
+function onEnded() {
+  toast("The host ended the meeting");
+  leaveCall("ended");
+}
+async function leaveCall(reason) {
+  const stop = () => { finished = true; if (ws) { ws.onclose = null; ws.close(); } local?.getTracks().forEach((t) => t.stop()); };
+  if (!hud.everOn) { stop(); if (reason === "ended") showEnded(); else location.href = "/"; return; }
+  $("wrap").classList.add("on");
+  hud.stopping = true;
+  const r = hud.rec;
+  if (r && r.state === "recording") await new Promise((res) => { r.addEventListener("stop", () => setTimeout(res, 0), { once: true }); r.stop(); });
+  await hud.pending;
+  for (let i = 0; i < 150 && hud.inflight; i++) await new Promise((res) => setTimeout(res, 100));
+  stop();
+  try { await Promise.race([summarize(hud.lang), new Promise((_, rej) => setTimeout(() => rej(new Error("slow")), 45000))]); } catch {}
+  location.href = "/notes/" + ROOM;
+}
+
+// ---- notes page: /notes/<room> ----
+async function notesPage() {
+  show("notes");
+  $("nMom").replaceChildren(el("p", "mute", "Hudbot is reading its notes…"));
+  const j = await (await api("/lines")).json();
+  hud.lines = j.lines; hud.summary = j.summary;
+  if (!hud.lines.length) return notesEmpty("Hudbot has no notes for this room. They may have been deleted after 30 days.");
+  if (!hud.summary) await rewriteNotes(); else paintNotes();
+}
+function notesEmpty(msg) {
+  $("nTitle").textContent = "No notes here";
+  $("nMeta").textContent = "";
+  $("nMom").replaceChildren(el("p", "mute", msg));
+  $("nTrWrap").hidden = true;
+  document.querySelector(".nbar").hidden = true;
+  $("notesBot").firstElementChild.dataset.mood = "sleep";
+}
+function paintNotes() {
+  const s = hud.summary;
+  $("nTitle").textContent = s.title;
+  $("nMeta").textContent = new Date(s.startedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) + " · about " + s.minutes + " min · " + s.people.join(", ");
+  renderMoM($("nMom"), s);
+  renderTranscript($("nTr"), hud.lines);
+  $("nTrWrap").hidden = false;
+  document.querySelector(".nbar").hidden = false;
+}
+async function rewriteNotes() {
+  const bot = $("notesBot").firstElementChild;
+  bot.dataset.mood = "write";
+  $("nMom").replaceChildren(el("p", "mute", "Hudbot is writing the minutes…"));
+  try { await summarize(hud.lang); paintNotes(); }
+  catch (e) { $("nMom").replaceChildren(el("p", "mute", e.message)); }
+  bot.dataset.mood = "done";
+}
+$("nRegen").onclick = rewriteNotes;
+$("nCopy").onclick = async () => {
+  if (!hud.summary) return;
+  await copyText(momText(hud.summary));
+  toast("Minutes copied. Ready to send to Anna.");
+};
+$("nLink").onclick = async () => { await copyText(location.href); toast("Link copied. Notes stay for 30 days."); };
+
+setInterval(moodTick, 300);
+paintHud();
+paintCaps();
+
+// ---------- go ----------
+if (notesId) notesPage();
+else if (!roomId) show("lobby");
+else prejoin();
+</script>
+</body>
+</html>

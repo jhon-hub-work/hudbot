@@ -1,0 +1,107 @@
+/* Hudbot: drawing + motion. Transform/opacity only. Entrances use ease-out, on-screen movement uses ease-in-out. */
+:root { --ease-out:cubic-bezier(0.23,1,0.32,1); --ease-io:cubic-bezier(0.77,0,0.175,1); }
+
+.hbslot { display:block; width:100%; will-change:transform; }
+.hb { display:block; width:100%; height:auto; overflow:visible; }
+
+.hb path, .hb circle, .hb rect, .hb ellipse { transition:opacity .3s var(--ease-out); }
+
+/* parts */
+.hb-body { fill:#58c79a; }
+.hb-face { fill:#0f1114; }
+.hb-eye circle { fill:#eceef1; }
+.hb-ant path { stroke:#58c79a; stroke-width:5; stroke-linecap:round; fill:none; }
+.hb-ant circle { fill:#8fe0bd; }
+.hb-arm path, .hb-leg path { stroke:#58c79a; stroke-width:5; stroke-linecap:round; stroke-linejoin:round; fill:none; }
+.hb-cheek { fill:#f2a6b0; opacity:.7; }
+.hb-mouth { fill:#f2a6b0; opacity:0; }
+.hb-pad rect { fill:#f2f3f5; }
+.hb-pad path { stroke:#b9bec6; stroke-width:2; stroke-linecap:round; fill:none; }
+.hb-ripples circle { fill:none; stroke:#58c79a; stroke-width:2; }
+.hb-happy path, .hb-asleep path { stroke:#eceef1; stroke-width:4; stroke-linecap:round; fill:none; }
+.hb-zz text { fill:#8d939c; font:600 15px var(--font, system-ui); }
+.hb-spark path { stroke:#f1d36b; stroke-width:2.5; stroke-linecap:round; fill:none; }
+
+/* which parts show in which mood */
+.hb-pad, .hb-ripples, .hb-happy, .hb-asleep, .hb-zz, .hb-spark { opacity:0; }
+.hb[data-mood="listen"] .hb-ripples { opacity:1; }
+.hb[data-mood="write"] .hb-pad { opacity:1; }
+.hb[data-mood="done"] .hb-happy, .hb[data-mood="done"] .hb-spark { opacity:1; }
+.hb[data-mood="done"] .hb-eyes { opacity:0; }
+.hb[data-mood="sleep"] .hb-asleep, .hb[data-mood="sleep"] .hb-zz { opacity:1; }
+.hb[data-mood="sleep"] .hb-eyes { opacity:0; }
+.hb[data-mood="sleep"] .hb-body, .hb[data-mood="sleep"] .hb-arm, .hb[data-mood="sleep"] .hb-leg, .hb[data-mood="sleep"] .hb-ant { opacity:.55; }
+
+/* always-on life: float, blink, antenna sway */
+.hb-all { animation:hb-float 3.4s var(--ease-io) infinite; }
+.hb-eye { transform-box:fill-box; transform-origin:center; animation:hb-blink 5.2s infinite; }
+.hb-ant { transform-origin:60px 30px; animation:hb-sway 2.8s var(--ease-io) infinite; }
+.hb-eyes { transition:opacity .3s var(--ease-out); }
+@keyframes hb-float { 50% { transform:translateY(-3px); } }
+@keyframes hb-blink { 0%,93%,100% { transform:scaleY(1); } 96% { transform:scaleY(.08); } }
+@keyframes hb-sway { 0%,100% { transform:rotate(-7deg); } 50% { transform:rotate(7deg); } }
+
+/* limbs rotate from their joints */
+.hb-arm.l { transform-origin:16px 72px; }
+.hb-arm.r { transform-origin:104px 72px; }
+.hb-leg.l { transform-origin:44px 104px; }
+.hb-leg.r { transform-origin:76px 104px; }
+.hb-arm, .hb-leg, .hb-look { transition:transform .4s var(--ease-out); }
+.hb-look { transform-origin:60px 66px; }
+
+/* moods */
+.hb[data-mood="listen"] .hb-look { transform:scale(1.22); }
+.hb[data-mood="listen"] .hb-ripples circle { transform-box:fill-box; transform-origin:center; animation:hb-ripple 1.6s var(--ease-out) infinite; }
+.hb[data-mood="listen"] .hb-ripples circle + circle { animation-delay:.55s; }
+@keyframes hb-ripple { from { transform:scale(.6); opacity:.9; } to { transform:scale(1.9); opacity:0; } }
+
+.hb[data-mood="write"] .hb-look { transform:translateY(4px); }
+.hb[data-mood="write"] .hb-arm.l { transform:rotate(-83deg); }
+.hb[data-mood="write"] .hb-arm.r { animation:hb-scribble .34s var(--ease-io) infinite alternate; }
+@keyframes hb-scribble { from { transform:rotate(76deg); } to { transform:rotate(92deg); } }
+
+.hb[data-mood="done"] .hb-arm.l { transform:rotate(139deg); }
+.hb[data-mood="done"] .hb-arm.r { transform:rotate(-139deg); }
+.hb[data-mood="done"] .hb-hop { animation:hb-hop .8s var(--ease-out) 2; }
+.hb[data-mood="done"] .hb-spark path { animation:hb-twinkle 1s var(--ease-io) infinite alternate; transform-box:fill-box; transform-origin:center; }
+.hb[data-mood="done"] .hb-spark path:nth-child(2) { animation-delay:.3s; }
+.hb[data-mood="done"] .hb-spark path:nth-child(3) { animation-delay:.6s; }
+@keyframes hb-twinkle { from { transform:scale(.6); opacity:.4; } to { transform:scale(1.15); opacity:1; } }
+@keyframes hb-hop { 0%,100% { transform:translateY(0) scale(1,1); } 30% { transform:translateY(-16px) scale(.97,1.04); } 55% { transform:translateY(0) scale(1.04,.95); } }
+
+.hb[data-mood="sleep"] .hb-ant { animation:none; transform:rotate(-32deg); }
+.hb[data-mood="sleep"] .hb-all { animation-duration:5.5s; }
+.hb[data-mood="sleep"] .hb-zz text { animation:hb-zz 2.8s var(--ease-out) infinite; }
+.hb[data-mood="sleep"] .hb-zz text + text { animation-delay:.9s; }
+@keyframes hb-zz { 0% { transform:translate(0,6px); opacity:0; } 30% { opacity:1; } 100% { transform:translate(4px,-8px); opacity:0; } }
+
+/* things it does on its own while idle */
+.hb.act-wave .hb-arm.r { animation:hb-wave 1.7s var(--ease-io) both; }
+@keyframes hb-wave { 0% { transform:rotate(0); } 16% { transform:rotate(-139deg); } 28%,52%,76% { transform:rotate(-118deg); } 40%,64%,88% { transform:rotate(-152deg); } 100% { transform:rotate(0); } }
+
+.hb.act-stretch .hb-arm.l { transform:rotate(139deg); }
+.hb.act-stretch .hb-arm.r { transform:rotate(-139deg); }
+.hb.act-stretch .hb-hop { animation:hb-stretch 1.7s var(--ease-io) both; }
+@keyframes hb-stretch { 0%,100% { transform:scale(1,1); } 35%,65% { transform:scale(.97,1.07); } }
+
+.hb.act-hop .hb-hop { animation:hb-hop .8s var(--ease-out); }
+
+.hb.act-look-l .hb-look { transform:translateX(-5px); }
+.hb.act-look-r .hb-look { transform:translateX(5px); }
+
+.hb.act-yawn .hb-mouth { animation:hb-yawn 1.9s var(--ease-io) both; transform-box:fill-box; transform-origin:center; }
+.hb.act-yawn .hb-eye { animation:hb-squint 1.9s var(--ease-io) both; }
+@keyframes hb-yawn { 0%,100% { opacity:0; transform:scale(.4); } 25%,70% { opacity:.95; transform:scale(1.3,2.3); } }
+@keyframes hb-squint { 0%,100% { transform:scaleY(1); } 25%,70% { transform:scaleY(.2); } }
+
+.hb.act-tap .hb-leg.r { animation:hb-tap 1s var(--ease-io) both; }
+@keyframes hb-tap { 0%,100% { transform:rotate(0); } 15%,45%,75% { transform:rotate(-16deg); } 30%,60%,90% { transform:rotate(0); } }
+
+.hb.walking .hb-leg.l { animation:hb-step .4s var(--ease-io) infinite alternate; }
+.hb.walking .hb-leg.r { animation:hb-step .4s var(--ease-io) infinite alternate-reverse; }
+@keyframes hb-step { from { transform:rotate(-14deg); } to { transform:rotate(14deg); } }
+
+@media (prefers-reduced-motion:reduce) {
+  .hb-all, .hb-ant, .hb-eye, .hb-hop, .hb *, .hbslot { animation:none !important; }
+  .hbslot { transition:none !important; }
+}

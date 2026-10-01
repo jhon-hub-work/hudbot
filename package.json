@@ -1,0 +1,9 @@
+{
+  "name": "hudbot",
+  "version": "1.0.0",
+  "description": "Free, open-source Zoom alternative: browser video rooms with no time limit, live captions and Hudbot, a robot that writes the minutes.",
+  "license": "MIT",
+  "private": true,
+  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy" },
+  "devDependencies": { "wrangler": "^4" }
+}
