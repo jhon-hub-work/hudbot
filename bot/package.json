@@ -1,0 +1,17 @@
+{
+  "name": "hudbot-meetings",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hudbot joins an outside meeting link, takes notes and makes slides for someone who missed it.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "join": "node --env-file-if-exists=.env hudbot.js join",
+    "make": "node --env-file-if-exists=.env hudbot.js make",
+    "test": "node --test --test-concurrency=1 test/links.test.js test/slides.test.js test/summary.test.js test/tap.test.js test/join-mock.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "playwright-core": "^1.64.0"
+  }
+}

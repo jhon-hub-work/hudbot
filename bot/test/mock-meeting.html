@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock meeting</title>
+</head>
+<body>
+<!-- Stands in for a meeting page in tests: name box, join button, audio prompt, meeting, then "ended". -->
+<div id="prejoin">
+  <input id="input-for-name" aria-label="Your Name">
+  <button id="join">Join</button>
+</div>
+<div id="audio" hidden>
+  <button id="audio-btn">Join Audio by Computer</button>
+</div>
+<div id="meeting" hidden>
+  <p>Meeting in progress</p>
+  <button>Leave</button>
+</div>
+<p id="ended" hidden>This meeting has been ended by host</p>
+<script>
+  const show = (id) => { document.getElementById(id).hidden = false; };
+  const hide = (id) => { document.getElementById(id).hidden = true; };
+  document.getElementById('join').onclick = () => { hide('prejoin'); show('audio'); };
+  document.getElementById('audio-btn').onclick = () => {
+    hide('audio');
+    show('meeting');
+    // A remote speaker kept at about -74 dB, so nobody hears it. Hudbot still gets the signal through the Web Audio path.
+    const ac = new AudioContext();
+    const tone = ac.createOscillator();
+    const quiet = ac.createGain();
+    quiet.gain.value = 0.0002;
+    tone.frequency.value = 440;
+    tone.connect(quiet);
+    quiet.connect(ac.destination);
+    tone.start();
+    setTimeout(() => { tone.stop(); hide('meeting'); show('ended'); }, 12000);
+  };
+</script>
+</body>
+</html>
